@@ -1,3 +1,62 @@
+This project is a personal learning endeavor for understanding MAPPO-related concepts. The comments in the source code that start with "Luke" represent my own interpretations and explanations. Some parts of the source code are accompanied by supplementary Markdown files for detailed explanations.
+For demonstrating on laptop,the trainning runs on cpu and the treads and trainning times are lower than usual. 
+# 1. How to run it
+## 1.1. Installation
+
+ Here we give an example installation on CUDA == 10.1. For non-GPU & other CUDA version installation, please refer to the [PyTorch website](https://pytorch.org/get-started/locally/). We remark that this repo. does not depend on a specific CUDA version, feel free to use any CUDA version suitable on your own computer.
+
+``` Bash
+# create conda environment
+conda create -n marl python==3.6.1
+conda activate marl
+pip install torch==1.5.1+cu101 torchvision==0.6.1+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+```
+
+```
+# install on-policy package
+cd on-policy
+pip install -e .
+```
+
+Even though we provide requirement.txt, it may have redundancy. We recommend that the user try to install other required packages by running the code and finding which required package hasn't installed yet.
+
+### 1.1.1. MPE
+
+``` Bash
+# install this package first
+pip install seaborn
+```
+
+There are 3 Cooperative scenarios in MPE:
+
+* simple_spread
+* simple_speaker_listener, which is 'Comm' scenario in paper
+* simple_reference
+
+## 1.2. Train
+Here we use train_mpe_spread.sh as an example:
+```
+cd onpolicy/scripts/train_mpe_scripts
+chmod +x ./train_mpe_spread.sh
+./train_mpe_spread.sh
+```
+Local results are stored in subfold scripts/results. Note that we use Weights & Bias as the default visualization platform; to use Weights & Bias, please register and login to the platform first. More instructions for using Weights&Bias can be found in the official [documentation](https://docs.wandb.ai/). Adding the `--use_wandb` in command line or in the .sh file will use Tensorboard instead of Weights & Biases. 
+
+# 2. Progress
+
+train_mpe.py ✅
+MPE_env.py ✅
+environment.py
+multi_discret.py
+base_runner.py
+separated/mpe_runner.py
+shared/mpe_runner.py
+files under scenarios
+
+# 3. TBD
+could be some content about why this works.
+
+Following is the original Readme.md
 # MAPPO
 
 Chao Yu*, Akash Velu*, Eugene Vinitsky, Jiaxuan Gao, Yu Wang, Alexandre Bayen, and Yi Wu. 

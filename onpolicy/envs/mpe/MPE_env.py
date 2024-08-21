@@ -20,10 +20,17 @@ def MPEEnv(args):
         .n                  :   Returns the number of Agents
     '''
 
+    # Luke: Load the scenario module using the provided scenario name (without the .py extension).
     # load scenario from script
     scenario = load(args.scenario_name + ".py").Scenario()
+    
+    # Luke: Create the world for the scenario. The world contains all the entities, agents, and dynamics
+    # specific to the scenario.
     # create world
     world = scenario.make_world(args)
+    
+    # Luke: Instantiate the MultiAgentEnv object, passing in the world, and the scenario-specific functions 
+    # for resetting the world, computing rewards, generating observations, and providing additional info.
     # create multiagent environment
     env = MultiAgentEnv(world, scenario.reset_world,
                         scenario.reward, scenario.observation, scenario.info)
