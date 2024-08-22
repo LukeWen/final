@@ -45,18 +45,32 @@ Local results are stored in subfold scripts/results. Note that we use Weights & 
 # 2. Progress
 
 train_mpe.py ✅
+
+
 MPE_env.py ✅
-environment.py
+
+
+environment.py ✅
+
+
 multi_discret.py
+
+
 base_runner.py
+
+
 separated/mpe_runner.py
+
+
 shared/mpe_runner.py
-files under scenarios
+
+
+files under scenarios folder
 
 # 3. TBD
 could be some content about why this works.
 
-Following is the original Readme.md
+Original repo address is https://github.com/marlbenchmark/on-policy. Following is the original Readme.md
 # MAPPO
 
 Chao Yu*, Akash Velu*, Eugene Vinitsky, Jiaxuan Gao, Yu Wang, Alexandre Bayen, and Yi Wu. 
