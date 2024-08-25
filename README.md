@@ -44,28 +44,46 @@ Local results are stored in subfold scripts/results. Note that we use Weights & 
 
 # 2. Progress
 
-train_mpe.py ✅
+scripts/train_mpe.py ✅
 
 
-MPE_env.py ✅
+envs/MPE_env.py ✅
 
 
-environment.py ✅
+envs/environment.py ✅
 
 
-~~multi_discret.py~~ (too short)
+envs/mpe/core.py ✅
 
 
-base_runner.py ✅
+runner/shared/base_runner.py ✅
 
 
-separated/mpe_runner.py 🏗️
+runner/separated/base_runner.py ✅
 
 
-shared/mpe_runner.py 🏗️
+runner/separated/mpe_runner.py ✅
 
 
-files under scenarios folder
+runner/shared/mpe_runner.py ✅
+
+
+envs/mpe/scenarios/simple_speaker_listener.py ✅
+
+
+envs/mpe/scenarios/simple_reference.py ✅
+
+
+envs/mpe/scenarios/simple_spread ✅
+
+
+algorithms/r_mappo.py ✅
+
+
+algorithms/algorithm/rMAPPOPolicy.py ✅
+
+
+algorithms/algorithm/r_actor_critic.py ✅
 
 # 3. Workflow 
 train_mpe_xxx.sh with specified parameters 
@@ -95,6 +113,11 @@ In the MPERunner, we use these parameters, including all environment settings, t
                             device = self.device)
 ```
 Then, with the specified algorithme code (i.e. PPO), we get trainer
+
+
+(TODO: add something about policy network)
+
+
 ```
   self.trainer = TrainAlgo(self.all_args, self.policy, device = self.device)
 ```
@@ -107,6 +130,7 @@ and buffer.
                                         self.envs.action_space[0])
 ```
 Then, it is the core part of trainning. (TODO: add detailed explaination)
+Prepation part
 ```
     def run(self):
         # Luke: Start the warmup process to initialize the environment and buffer.
@@ -121,6 +145,10 @@ Then, it is the core part of trainning. (TODO: add detailed explaination)
             # Luke: Apply linear learning rate decay if it's enabled in the configuration.
             if self.use_linear_lr_decay:
                 self.trainer.policy.lr_decay(episode, episodes)
+```
+
+Collect,step(executive), and insert 
+```
 
             for step in range(self.episode_length):
                 # Sample actions
@@ -137,7 +165,9 @@ Then, it is the core part of trainning. (TODO: add detailed explaination)
                 # insert data into buffer
                 # Luke: Insert the collected data into the buffer.
                 self.insert(data)
-
+```
+Compute, post process, save model, log, and evaluate
+```
             # compute return and update network
             # Luke: After the episode, compute the returns and update the network.
             self.compute()
@@ -187,30 +217,9 @@ Then, it is the core part of trainning. (TODO: add detailed explaination)
             # Luke: Evaluate the policy at specified intervals if evaluation is enabled.
             if episode % self.eval_interval == 0 and self.use_eval:
                 self.eval(total_num_steps)
-
-    def warmup(self):
-        # reset env
-        # Luke: Reset the environment to get initial observations.
-        obs = self.envs.reset()
-
-        # replay buffer
-        # Luke: Prepare the shared observations based on whether centralized value functions are used.
-        if self.use_centralized_V:
-            # Luke: This line of code rearranges the original observations, flattening all observations in each rollout thread into a one-dimensional array.
-            # For example, if the shape of `obs` is (n_rollout_threads, num_agents, obs_dim), this line will convert it to (n_rollout_threads, obs_dim * num_agents),
-            # merging all agents' observations into a shared observation.
-            share_obs = obs.reshape(self.n_rollout_threads, -1)
-            # Luke: This line of code first adds a new dimension along axis 1 using `np.expand_dims(share_obs, 1)` to prepare for replication.
-            # Then, it uses `repeat(self.num_agents, axis=1)` to replicate the shared observation for each agent along the newly added dimension.
-            # As a result, each agent has the same shared observation, which is used for centralized learning or decision-making.
-            share_obs = np.expand_dims(share_obs, 1).repeat(self.num_agents, axis=1)
-        else:
-            share_obs = obs
-
-        # Luke: Store the initial observations in the buffer.
-        self.buffer.share_obs[0] = share_obs.copy()
-        self.buffer.obs[0] = obs.copy()
-
+```
+Detailes of collectation
+```
     @torch.no_grad()
     def collect(self, step):
         # Luke: Prepare the trainer for rollout (e.g., set the model to evaluation mode).
@@ -244,7 +253,9 @@ Then, it is the core part of trainning. (TODO: add detailed explaination)
             raise NotImplementedError
 
         return values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env
-
+```
+Detailes of insertation
+```
     def insert(self, data):
         # Luke: Unpack the data tuple into individual components.
         obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic = data
@@ -265,7 +276,9 @@ Then, it is the core part of trainning. (TODO: add detailed explaination)
 
         # Luke: Insert the collected data into the buffer.
         self.buffer.insert(share_obs, obs, rnn_states, rnn_states_critic, actions, action_log_probs, values, rewards, masks)
-
+```
+Detailes of evaluation
+```
     @torch.no_grad()
     def eval(self, total_num_steps):
         # Luke: Initialize a list to store rewards for evaluation episodes.

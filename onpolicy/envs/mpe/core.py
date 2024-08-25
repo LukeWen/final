@@ -14,6 +14,7 @@ class AgentState(EntityState):
     def __init__(self):
         super(AgentState, self).__init__()
         # communication utterance
+        # Luke: Initialize the communication utterance of the agent as None.
         self.c = None
 
 # action of the agent
@@ -63,6 +64,7 @@ class Entity(object):
         self.color = None
         # max speed and accel
         self.max_speed = None
+        # Luke: Set the acceleration of the entity (None means no acceleration).
         self.accel = None
         # state: including internal/mental state p_pos, p_vel
         self.state = EntityState()
@@ -71,6 +73,7 @@ class Entity(object):
         # commu channel
         self.channel = None
 
+    # Luke: Property method to return the mass of the entity.
     @property
     def mass(self):
         return self.initial_mass
@@ -78,11 +81,13 @@ class Entity(object):
 # properties of landmark entities
 class Landmark(Entity):
     def __init__(self):
+        # Luke: Call the constructor of the parent class Entity to initialize the landmark.
         super(Landmark, self).__init__()
 
 # properties of agent entities
 class Agent(Entity):
     def __init__(self):
+        # Luke: Call the constructor of the parent class Entity to initialize the agent.
         super(Agent, self).__init__()
         # agent are adversary
         self.adversary = False
@@ -107,6 +112,7 @@ class Agent(Entity):
         # script behavior to execute
         self.action_callback = None
         # zoe 20200420
+        # Luke: Initialize the goal of the agent (if any).
         self.goal = None
 
 # multi-agent world
@@ -114,7 +120,9 @@ class World(object):
     def __init__(self):
         # list of agents and entities (can change at execution-time!)
         self.agents = []
+        # Luke: Initialize the list of landmarks in the world.
         self.landmarks = []
+        # Luke: Initialize the list of walls in the world.
         self.walls = []
         # communication channel dimensionality
         self.dim_c = 0
@@ -128,15 +136,22 @@ class World(object):
         self.damping = 0.25
         # contact response parameters
         self.contact_force = 1e+2
+        # Luke: Set the contact margin (softness of collision).
         self.contact_margin = 1e-3
         # cache distances between all agents (not calculated by default)
         self.cache_dists = False
+        # Luke: Initialize cached distance vectors as None.
         self.cached_dist_vect = None
+        # Luke: Initialize cached distance magnitudes as None.
         self.cached_dist_mag = None
         # zoe 20200420
+        # Luke: Initialize the length of the world.
         self.world_length = 25
+        # Luke: Initialize the world step counter.
         self.world_step = 0
+        # Luke: Initialize the number of agents in the world.
         self.num_agents = 0
+        # Luke: Initialize the number of landmarks in the world.
         self.num_landmarks = 0
 
     # return all entities in the world
@@ -172,21 +187,27 @@ class World(object):
         for ia, entity_a in enumerate(self.entities):
             for ib in range(ia + 1, len(self.entities)):
                 entity_b = self.entities[ib]
+                # Luke: Calculate the difference in position between two entities.
                 delta_pos = entity_a.state.p_pos - entity_b.state.p_pos
                 self.cached_dist_vect[ia, ib, :] = delta_pos
                 self.cached_dist_vect[ib, ia, :] = -delta_pos
 
+        # Luke: Calculate the magnitude of distances between all entities.
         self.cached_dist_mag = np.linalg.norm(self.cached_dist_vect, axis=2)
 
+        # Luke: Determine if entities are colliding based on their distances and minimum distances.
         self.cached_collisions = (self.cached_dist_mag <= self.min_dists)
 
     def assign_agent_colors(self):
+        # Luke: Initialize the number of dummy agents.
         n_dummies = 0
         if hasattr(self.agents[0], 'dummy'):
             n_dummies = len([a for a in self.agents if a.dummy])
+        # Luke: Initialize the number of adversary agents.
         n_adversaries = 0
         if hasattr(self.agents[0], 'adversary'):
             n_adversaries = len([a for a in self.agents if a.adversary])
+        # Luke: Calculate the number of good agents (non-adversary, non-dummy).
         n_good_agents = len(self.agents) - n_adversaries - n_dummies
         # r g b
         dummy_colors = [(0.25, 0.75, 0.25)] * n_dummies
@@ -195,6 +216,7 @@ class World(object):
         # sns.color_palette("GnBu_d", n_good_agents)
         good_colors = [(0.25, 0.25, 0.75)] * n_good_agents
         colors = dummy_colors + adv_colors + good_colors
+        # Luke: Assign colors to agents based on their roles.
         for color, agent in zip(colors, self.agents):
             agent.color = color
 
@@ -206,6 +228,7 @@ class World(object):
     # update state of the world
     def step(self):
         # zoe 20200420
+        # Luke: Increment the world step counter.
         self.world_step += 1
         # set actions for scripted agents
         for agent in self.scripted_agents:
@@ -244,6 +267,7 @@ class World(object):
             for b, entity_b in enumerate(self.entities):
                 if(b <= a):
                     continue
+                # Luke: Calculate collision force between two entities.
                 [f_a, f_b] = self.get_entity_collision_force(a, b)
                 if(f_a is not None):
                     if(p_force[a] is None):
@@ -255,6 +279,7 @@ class World(object):
                     p_force[b] = f_b + p_force[b]
             if entity_a.movable:
                 for wall in self.walls:
+                    # Luke: Calculate collision force between an entity and a wall.
                     wf = self.get_wall_collision_force(entity_a, wall)
                     if wf is not None:
                         if p_force[a] is None:
@@ -266,6 +291,7 @@ class World(object):
         for i, entity in enumerate(self.entities):
             if not entity.movable:
                 continue
+            # Luke: Apply damping to the entity's velocity.
             entity.state.p_vel = entity.state.p_vel * (1 - self.damping)
             if (p_force[i] is not None):
                 entity.state.p_vel += (p_force[i] / entity.mass) * self.dt
@@ -325,8 +351,8 @@ class World(object):
         if entity.ghost and not wall.hard:
             return None  # ghost passes through soft walls
         if wall.orient == 'H':
-            prll_dim = 0
-            perp_dim = 1
+            prll_dim = 0  # Luke: Parallel dimension is y-axis for vertical walls.
+            perp_dim = 1  # Luke: Perpendicular dimension is x-axis for vertical walls.
         else:
             prll_dim = 1
             perp_dim = 0

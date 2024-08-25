@@ -20,7 +20,7 @@ class MPERunner(Runner):
 
     def run(self):
         # Luke: Start the warmup process to initialize the environment and buffer.
-        self.warmup()   
+        self.warmup()
 
         # Luke: Record the start time of the training process.
         start = time.time()
@@ -149,7 +149,7 @@ class MPERunner(Runner):
             temp_actions_env.append(action_env)
             action_log_probs.append(_t2n(action_log_prob))
             rnn_states.append(_t2n(rnn_state))
-            rnn_states_critic.append( _t2n(rnn_state_critic))
+            rnn_states_critic.append(_t2n(rnn_state_critic))
 
         # [envs, agents, dim]
         actions_env = []
