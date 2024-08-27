@@ -85,6 +85,9 @@ algorithms/algorithm/rMAPPOPolicy.py ✅
 
 algorithms/algorithm/r_actor_critic.py ✅
 
+
+utils/shared_buffer.py ✅
+
 # 3. Workflow 
 train_mpe_xxx.sh with specified parameters 
 
@@ -511,7 +514,7 @@ After warmup (initiate) is lr_decay
             if self.use_linear_lr_decay:
                 self.trainer.policy.lr_decay(episode, episodes)
 ```
-update lr for both actor and critic. initial_lr is 7e-4 for both for each episode. 
+update learning rate for both actor and critic. initial_lr is 7e-4 for both for each episode. 
 ```
 def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
     """Decreases the learning rate linearly"""
@@ -700,7 +703,7 @@ To compute it, we need to get value first:
         values, _ = self.critic(cent_obs, rnn_states_critic, masks)
         return values
 ```
-It is values and a CNN Network.
+It is values and a MLP Network.
 ```
 class R_Critic(nn.Module):
     """
@@ -761,7 +764,7 @@ class R_Critic(nn.Module):
         # Luke: Compute the returns based on the next values and update the buffer.
         self.buffer.compute_returns(next_values, self.trainer.value_normalizer)
 ```
-In shard_buffer.py, use_gae default is True, use_proper_time_limits default is False, and use_popart default is Ture:
+In shared_buffer.py, use_gae default is True, use_proper_time_limits default is False, and use_popart default is Ture:
 ```
     def compute_returns(self, next_value, value_normalizer=None):
         """
@@ -781,7 +784,7 @@ In shard_buffer.py, use_gae default is True, use_proper_time_limits default is F
                         self.returns[step] = gae + value_normalizer.denormalize(self.value_preds[step])
             train_infos = self.train()
 ```
-In algorithms/r_mappo.py, we train the modle. This is the core algorithem of PPO.
+In algorithms/r_mappo.py, we train the model. This is the core algorithem of PPO.
 Calculate the value function loss by clipping the predicted values to ensure stability in value updates.
 ```
 
