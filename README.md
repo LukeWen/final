@@ -33,7 +33,7 @@ There are 3 Cooperative scenarios in MPE:
 * simple_speaker_listener, which is 'Comm' scenario in paper
 * simple_reference
 
-## 1.2. Train
+## 1.2. Training
 Here we use train_mpe_spread.sh as an example:
 ```
 cd onpolicy/scripts/train_mpe_scripts
@@ -42,295 +42,66 @@ chmod +x ./train_mpe_spread.sh
 ```
 Local results are stored in subfold scripts/results. Note that we use Weights & Bias as the default visualization platform; to use Weights & Bias, please register and login to the platform first. More instructions for using Weights&Bias can be found in the official [documentation](https://docs.wandb.ai/). Adding the `--use_wandb` in command line or in the .sh file will use Tensorboard instead of Weights & Biases. 
 
-# 2. Progress
+# 2. Process 
+The codebase follows a structured flow that can be articulated through several critical phases:
 
-scripts/train/train_mpe.py ✅
+## 2.1. Environment Initialization (`MPE_env.py`, `simple_spread.py`, `environment.py`):
 
+- **Scenario Definition** (`simple_spread.py`): The first step involves defining specific scenarios for multi-agent environments, such as the "Simple Spread" task. This file outlines the tasks that agents are required to complete within the environment.
+- **Environment Setup** (`MPE_env.py`): Subsequently, the environment is instantiated based on the scenarios. This setup determines how multiple agents will interact and what rules govern these interactions.
+- **Environment Management** (`environment.py`): Core functions such as resetting the environment, advancing steps, and rendering states are managed here. This module ensures that the environment operates according to the specifications defined in the setup phase.
 
-envs/MPE_env.py ✅
+## 2.2. Policy Initialization (`rMAPPOPolicy.py`, `r_actor_critic.py`):
 
+- **Actor-Critic Architecture** (`r_actor_critic.py`): The neural network architecture that underpins the Actor-Critic model is defined here. The Actor network is responsible for action selection, while the Critic network evaluates the value of the selected actions.
+- **MAPPO Policy** (`rMAPPOPolicy.py`): This module implements the Multi-Agent Proximal Policy Optimization (MAPPO) algorithm. It leverages the Actor-Critic architecture to manage policy updates across multiple agents, ensuring coordinated decision-making in a multi-agent setting.
 
-envs/environment.py ✅
+## 2.3. Training Loop (`r_mappo.py`, `base_runner.py`, `mpe_runner.py`):
 
+- **MAPPO Algorithm Implementation** (`r_mappo.py`): The core training algorithm is executed within this module. It involves collecting experiences from the environment, calculating the loss, and updating the policy iteratively. The interaction between agents and the environment is central to this phase.
+- **Training Management** (`mpe_runner.py`, `base_runner.py`): These runner modules oversee the execution of the training process. They handle the initialization of agents and environments, manage the training loop, and ensure that data is logged and saved appropriately.
 
-envs/mpe/core.py ✅
+## 2.4. Training Execution (`train_mpe.py`):
 
+- **Main Training Script**: This script serves as the entry point for the entire project. It integrates the various components—environment, policy, and training management—into a cohesive process. The script initiates the environment, sets up the agents, and executes the training loop until the desired convergence is achieved.
 
-runner/shared/base_runner.py ✅
+# 3. Structure
+The structure of the codebase is deliberately modular, facilitating ease of maintenance and scalability. The codebase is organized into the following primary components:
 
+## 3.1. Environment Module (`MPE_env.py`, `simple_spread.py`, `environment.py`):
 
-runner/separated/base_runner.py ✅
+- **Objective**: To define and manage the multi-agent environment, including the rules of interaction and the tasks to be performed by the agents.
+- **Structure**:
+  - **`simple_spread.py`**: Defines specific multi-agent tasks and the rules governing agent behavior.
+  - **`MPE_env.py`**: Manages the instantiation and configuration of different environment scenarios, providing a unified interface for interaction.
+  - **`environment.py`**: Implements fundamental environment operations such as resetting, stepping through time, and visualizing the state.
 
+## 3.2. Policy Module (`rMAPPOPolicy.py`, `r_actor_critic.py`):
 
-runner/separated/mpe_runner.py ✅
+- **Objective**: To define and manage the policies governing agent behavior, particularly through the Actor-Critic architecture.
+- **Structure**:
+  - **`r_actor_critic.py`**: Establishes the neural network architecture used for both the Actor and Critic, which are central to decision-making and value estimation in reinforcement learning.
+  - **`rMAPPOPolicy.py`**: Implements the MAPPO algorithm, adapting the Actor-Critic framework for a multi-agent context and ensuring that policy updates account for the interactions between agents.
 
+## 3.3. Algorithm Module (`r_mappo.py`):
 
-runner/shared/mpe_runner.py ✅
+- **Objective**: To execute the MAPPO algorithm, facilitating the iterative process of experience collection, loss computation, and policy optimization.
+- **Structure**:
+  - **`r_mappo.py`**: Serves as the core algorithmic engine of the project, interacting with both the policy and environment modules to conduct training.
 
+## 3.4. Training Management Module (`base_runner.py`, `mpe_runner.py`):
 
-envs/mpe/scenarios/simple_speaker_listener.py ✅
+- **Objective**: To manage the overall training process, ensuring that each component is properly initialized and that the training loop is executed effectively.
+- **Structure**:
+  - **`base_runner.py`**: Provides a generalized framework for running training sessions, handling the iteration over multiple episodes and the collection of performance metrics.
+  - **`mpe_runner.py`**: Specializes the general runner for multi-agent environments, tailoring the training process to the specific needs of scenarios like those defined in `simple_spread.py`.
 
+## 3.5. Main Script (`train_mpe.py`):
 
-envs/mpe/scenarios/simple_reference.py ✅
+- **Objective**: To integrate all modules and initiate the training process, serving as the operational entry point for the entire project.
+- **Structure**:
+  - **`train_mpe.py`**: Combines environment initialization, policy setup, and the training loop into a cohesive sequence, executing the defined training regimen from start to finish.
 
-
-envs/mpe/scenarios/simple_spread.py ✅
-
-
-algorithms/r_mappo.py ✅
-
-
-algorithms/algorithm/rMAPPOPolicy.py ✅
-
-
-algorithms/algorithm/r_actor_critic.py ✅
-
-
-utils/shared_buffer.py ✅
-
-# 3. Workflow 
-train_mpe_xxx.sh with specified parameters 
-
-calls 
-
-train_mpe.py
-
-After all initiating works,
-```
-    if all_args.share_policy:
-        from onpolicy.runner.shared.mpe_runner import MPERunner as Runner
-    else:
-        from onpolicy.runner.separated.mpe_runner import MPERunner as Runner
-
-    runner = Runner(config)
-    runner.run()
-```
-get one MPERunner to run the process.
-
-In the MPERunner, we use these parameters, including all environment settings, to initiate policy network. (Take centralized version as an example.)
-```
-    self.policy = Policy(self.all_args,
-                            self.envs.observation_space[0],
-                            share_observation_space, 
-                            self.envs.action_space[0],
-                            device = self.device)
-```
-Then, with the specified algorithme code (i.e. PPO), we get trainer
-
-```
-  self.trainer = TrainAlgo(self.all_args, self.policy, device = self.device)
-```
-and buffer.
-```
-        self.buffer = SharedReplayBuffer(self.all_args,
-                                        self.num_agents,
-                                        self.envs.observation_space[0],
-                                        share_observation_space,
-                                        self.envs.action_space[0])
-```
-Then, it is the core part of trainning. (TODO: add detailed explaination)
-Prepation part
-```
-    def run(self):
-        # Luke: Start the warmup process to initialize the environment and buffer.
-        self.warmup()   
-
-        # Luke: Record the start time of the training process.
-        start = time.time()
-        # Luke: Calculate the total number of episodes based on the number of environment steps, episode length, and the number of rollout threads.
-        episodes = int(self.num_env_steps) // self.episode_length // self.n_rollout_threads
-
-        for episode in range(episodes):
-            # Luke: Apply linear learning rate decay if it's enabled in the configuration.
-            if self.use_linear_lr_decay:
-                self.trainer.policy.lr_decay(episode, episodes)
-```
-
-Collect,step(executive), and insert 
-```
-
-            for step in range(self.episode_length):
-                # Sample actions
-                # Luke: Collect data by sampling actions from the policy.
-                values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
-                    
-                # Obser reward and next obs
-                # Luke: Execute the actions in the environment and observe the results (next observations, rewards, done flags, and info).
-                obs, rewards, dones, infos = self.envs.step(actions_env)
-
-                # Luke: Package the collected data into a tuple for easy insertion into the buffer.
-                data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
-
-                # insert data into buffer
-                # Luke: Insert the collected data into the buffer.
-                self.insert(data)
-```
-Compute, post process, save model, log, and evaluate
-```
-            # compute return and update network
-            # Luke: After the episode, compute the returns and update the network.
-            self.compute()
-            train_infos = self.train()
-            
-            # post process
-            # Luke: Calculate the total number of steps taken so far.
-            total_num_steps = (episode + 1) * self.episode_length * self.n_rollout_threads
-            
-            # save model
-            # Luke: Save the model at specified intervals or at the last episode.
-            if (episode % self.save_interval == 0 or episode == episodes - 1):
-                self.save()
-
-            # log information
-            # Luke: Log information at specified intervals.
-            if episode % self.log_interval == 0:
-                end = time.time()
-                print("\n Scenario {} Algo {} Exp {} updates {}/{} episodes, total num timesteps {}/{}, FPS {}.\n"
-                        .format(self.all_args.scenario_name,
-                                self.algorithm_name,
-                                self.experiment_name,
-                                episode,
-                                episodes,
-                                total_num_steps,
-                                self.num_env_steps,
-                                int(total_num_steps / (end - start))))
-
-                # Luke: Log individual rewards for each agent in the MPE environment.
-                if self.env_name == "MPE":
-                    env_infos = {}
-                    for agent_id in range(self.num_agents):
-                        idv_rews = []
-                        for info in infos:
-                            if 'individual_reward' in info[agent_id].keys():
-                                idv_rews.append(info[agent_id]['individual_reward'])
-                        agent_k = 'agent%i/individual_rewards' % agent_id
-                        env_infos[agent_k] = idv_rews
-
-                # Luke: Log the average episode rewards.
-                train_infos["average_episode_rewards"] = np.mean(self.buffer.rewards) * self.episode_length
-                print("average episode rewards is {}".format(train_infos["average_episode_rewards"]))
-                self.log_train(train_infos, total_num_steps)
-                self.log_env(env_infos, total_num_steps)
-
-            # eval
-            # Luke: Evaluate the policy at specified intervals if evaluation is enabled.
-            if episode % self.eval_interval == 0 and self.use_eval:
-                self.eval(total_num_steps)
-```
-Detailes of collectation
-```
-    @torch.no_grad()
-    def collect(self, step):
-        # Luke: Prepare the trainer for rollout (e.g., set the model to evaluation mode).
-        self.trainer.prep_rollout()
-        # Luke: Get the actions, values, and log probabilities from the policy's action distribution.
-        value, action, action_log_prob, rnn_states, rnn_states_critic \
-            = self.trainer.policy.get_actions(np.concatenate(self.buffer.share_obs[step]),
-                            np.concatenate(self.buffer.obs[step]),
-                            np.concatenate(self.buffer.rnn_states[step]),
-                            np.concatenate(self.buffer.rnn_states_critic[step]),
-                            np.concatenate(self.buffer.masks[step]))
-        # [self.envs, agents, dim]
-        # Luke: Convert the collected values, actions, and log probabilities to numpy arrays and split them by rollout threads.
-        values = np.array(np.split(_t2n(value), self.n_rollout_threads))
-        actions = np.array(np.split(_t2n(action), self.n_rollout_threads))
-        action_log_probs = np.array(np.split(_t2n(action_log_prob), self.n_rollout_threads))
-        rnn_states = np.array(np.split(_t2n(rnn_states), self.n_rollout_threads))
-        rnn_states_critic = np.array(np.split(_t2n(rnn_states_critic), self.n_rollout_threads))
-        # rearrange action
-        # Luke: Rearrange the actions to match the environment's action space format.
-        if self.envs.action_space[0].__class__.__name__ == 'MultiDiscrete':
-            for i in range(self.envs.action_space[0].shape):
-                uc_actions_env = np.eye(self.envs.action_space[0].high[i] + 1)[actions[:, :, i]]
-                if i == 0:
-                    actions_env = uc_actions_env
-                else:
-                    actions_env = np.concatenate((actions_env, uc_actions_env), axis=2)
-        elif self.envs.action_space[0].__class__.__name__ == 'Discrete':
-            actions_env = np.squeeze(np.eye(self.envs.action_space[0].n)[actions], 2)
-        else:
-            raise NotImplementedError
-
-        return values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env
-```
-Detailes of insertation
-```
-    def insert(self, data):
-        # Luke: Unpack the data tuple into individual components.
-        obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic = data
-
-        # Luke: Reset RNN states for agents that are done.
-        rnn_states[dones == True] = np.zeros(((dones == True).sum(), self.recurrent_N, self.hidden_size), dtype=np.float32)
-        rnn_states_critic[dones == True] = np.zeros(((dones == True).sum(), *self.buffer.rnn_states_critic.shape[3:]), dtype=np.float32)
-        # Luke: Create masks to indicate whether an agent is done or not.
-        masks = np.ones((self.n_rollout_threads, self.num_agents, 1), dtype=np.float32)
-        masks[dones == True] = np.zeros(((dones == True).sum(), 1), dtype=np.float32)
-
-        # Luke: Prepare the shared observations based on whether centralized value functions are used.
-        if self.use_centralized_V:
-            share_obs = obs.reshape(self.n_rollout_threads, -1)
-            share_obs = np.expand_dims(share_obs, 1).repeat(self.num_agents, axis=1)
-        else:
-            share_obs = obs
-
-        # Luke: Insert the collected data into the buffer.
-        self.buffer.insert(share_obs, obs, rnn_states, rnn_states_critic, actions, action_log_probs, values, rewards, masks)
-```
-Detailes of evaluation
-```
-    @torch.no_grad()
-    def eval(self, total_num_steps):
-        # Luke: Initialize a list to store rewards for evaluation episodes.
-        eval_episode_rewards = []
-        # Luke: Reset the evaluation environments to get initial observations.
-        eval_obs = self.eval_envs.reset()
-
-        # Luke: Initialize RNN states and masks for the evaluation episodes.
-        eval_rnn_states = np.zeros((self.n_eval_rollout_threads, *self.buffer.rnn_states.shape[2:]), dtype=np.float32)
-        eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
-
-        for eval_step in range(self.episode_length):
-            # Luke: Prepare the trainer for rollout and perform actions deterministically during evaluation.
-            self.trainer.prep_rollout()
-            eval_action, eval_rnn_states = self.trainer.policy.act(np.concatenate(eval_obs),
-                                                np.concatenate(eval_rnn_states),
-                                                np.concatenate(eval_masks),
-                                                deterministic=True)
-            eval_actions = np.array(np.split(_t2n(eval_action), self.n_eval_rollout_threads))
-            eval_rnn_states = np.array(np.split(_t2n(eval_rnn_states), self.n_eval_rollout_threads))
-            
-            # Luke: Rearrange the evaluation actions to match the environment's action space format.
-            if self.eval_envs.action_space[0].__class__.__name__ == 'MultiDiscrete':
-                for i in range(self.eval_envs.action_space[0].shape):
-                    eval_uc_actions_env = np.eye(self.eval_envs.action_space[0].high[i]+1)[eval_actions[:, :, i]]
-                    if i == 0:
-                        eval_actions_env = eval_uc_actions_env
-                    else:
-                        eval_actions_env = np.concatenate((eval_actions_env, eval_uc_actions_env), axis=2)
-            elif self.eval_envs.action_space[0].__class__.__name__ == 'Discrete':
-                eval_actions_env = np.squeeze(np.eye(self.eval_envs.action_space[0].n)[eval_actions], 2)
-            else:
-                raise NotImplementedError
-
-            # Obser reward and next obs
-            # Luke: Execute the evaluation actions in the environment and observe the results.
-            eval_obs, eval_rewards, eval_dones, eval_infos = self.eval_envs.step(eval_actions_env)
-            eval_episode_rewards.append(eval_rewards)
-
-            # Luke: Reset RNN states for agents that are done during evaluation.
-            eval_rnn_states[eval_dones == True] = np.zeros(((eval_dones == True).sum(), self.recurrent_N, self.hidden_size), dtype=np.float32)
-            eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
-            eval_masks[eval_dones == True] = np.zeros(((eval_dones == True).sum(), 1), dtype=np.float32)
-
-        # Luke: Calculate the total rewards for evaluation episodes.
-        eval_episode_rewards = np.array(eval_episode_rewards)
-        eval_env_infos = {}
-        eval_env_infos['eval_average_episode_rewards'] = np.sum(np.array(eval_episode_rewards), axis=0)
-        eval_average_episode_rewards = np.mean(eval_env_infos['eval_average_episode_rewards'])
-        print("eval average episode rewards of agent: " + str(eval_average_episode_rewards))
-        # Luke: Log the evaluation results.
-        self.log_env(eval_env_infos, total_num_steps)
-```
 
 
 # 4. Case Study
@@ -347,7 +118,8 @@ num_agents=3
 algo="mappo"
 ```
 
-This environment has 3 agents(big violet circle), 3 landmarks (small black circle). At a high level, agents must learn to cover all the landmarks while avoiding collisions.
+This environment has 3 agents(big violet circle), 3 landmarks (small black circle). 
+At a high level, agents must learn to cover all the landmarks while avoiding collisions.
 
 More specifically, all agents are globally rewarded based on how far the closest agent is to each landmark (sum of the minimum distances). Locally, the agents are penalized if they collide with other agents (-1 for each collision). The relative weights of these rewards can be controlled with the local_ratio parameter.
 
@@ -388,7 +160,8 @@ def make_train_env(all_args):
             return env
         return init_env
 
-    # Luke: Return either a single-threaded (DummyVecEnv) or multi-threaded (SubprocVecEnv) environment based on the number of rollout threads.
+    # Luke: Return either a single-threaded (DummyVecEnv) or 
+    # multi-threaded (SubprocVecEnv) environment based on the number of rollout threads.
     if all_args.n_rollout_threads == 1:
         return DummyVecEnv([get_env_fn(0)])
     else:
@@ -402,7 +175,8 @@ env.seed(1)
 ```
 def make_eval_env(all_args):
     # Luke: This function creates the environment for evaluation.
-    # Luke: Similar to make_train_env, but with different seeding to ensure evaluation is independent of training.
+    # Luke: Similar to make_train_env, but with different 
+    # seeding to ensure evaluation is independent of training.
     def get_env_fn(rank):
         def init_env():
             # Luke: Initialize the MPE environment based on the provided arguments.
@@ -418,7 +192,8 @@ def make_eval_env(all_args):
             return env
         return init_env
 
-    # Luke: Return either a single-threaded (DummyVecEnv) or multi-threaded (SubprocVecEnv) environment based on the number of evaluation rollout threads.
+    # Luke: Return either a single-threaded (DummyVecEnv) or 
+    # multi-threaded (SubprocVecEnv) environment based on the number of evaluation rollout threads.
     if all_args.n_eval_rollout_threads == 1:
         return DummyVecEnv([get_env_fn(0)])
     else:
@@ -491,8 +266,9 @@ In envs/mpe/scenarios/simple_spread.py
             comm.append(other.state.c)
             other_pos.append(other.state.p_pos - agent.state.p_pos)
 
-        # Luke: Return a concatenated array of the agent's velocity, position, relative positions of entities, and communication states
-        return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
+        # Luke: Return a concatenated array of the agent's velocity, position, 
+        # relative positions of entities, and communication states
+        # return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
 ```
 Calculate the reward for an agent based on its proximity to landmarks and penalizes it for collisions. The reward is determined by the minimum distance between any agent and each landmark, with a deduction for any collisions between the agent and others.
 
@@ -524,11 +300,13 @@ def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr):
 ```
 Optimizer is Adam optimizer (It has been proposed in _`Adam: A Method for Stochastic Optimization`_.).
 ```
-        # Luke: Set up the optimizer for the actor network using Adam, with learning rate, epsilon, and weight decay.
+        # Luke: Set up the optimizer for the actor network using Adam, 
+        # with learning rate, epsilon, and weight decay.
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(),
                                                 lr=self.lr, eps=self.opti_eps,
                                                 weight_decay=self.weight_decay)
-        # Luke: Set up the optimizer for the critic network using Adam, with learning rate, epsilon, and weight decay.
+        # Luke: Set up the optimizer for the critic network using Adam, 
+        # with learning rate, epsilon, and weight decay.
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(),
                                                  lr=self.critic_lr,
                                                  eps=self.opti_eps,
@@ -539,7 +317,8 @@ Collect, step, insert data in each step.
             for step in range(self.episode_length):
                 # Sample actions
                 # Luke: Collect data by sampling actions from the policy.
-                values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
+                values, actions, action_log_probs, rnn_states, rnn_states_critic, \
+                    actions_env = self.collect(step)
 ```
 Collect data, including values, actions, action_log_probs, rnn_states, rnn_states_critic, and actions_env.
 ```
@@ -555,7 +334,8 @@ Collect data, including values, actions, action_log_probs, rnn_states, rnn_state
                             np.concatenate(self.buffer.rnn_states_critic[step]),
                             np.concatenate(self.buffer.masks[step]))
         # [self.envs, agents, dim]
-        # Luke: Convert the collected values, actions, and log probabilities to numpy arrays and split them by rollout threads.
+        # Luke: Convert the collected values, actions, and log probabilities to 
+        # numpy arrays and split them by rollout threads.
         values = np.array(np.split(_t2n(value), self.n_rollout_threads))
         actions = np.array(np.split(_t2n(action), self.n_rollout_threads))
         action_log_probs = np.array(np.split(_t2n(action_log_prob), self.n_rollout_threads))
@@ -580,14 +360,16 @@ Collect data, including values, actions, action_log_probs, rnn_states, rnn_state
 Make the environment to step.
 ```    
                 # Obser reward and next obs
-                # Luke: Execute the actions in the environment and observe the results (next observations, rewards, done flags, and info).
+                # Luke: Execute the actions in the environment and observe the results 
+                # (next observations, rewards, done flags, and info).
                 obs, rewards, dones, infos = self.envs.step(actions_env)
 ```
 In envs/MPE_env.py 
 ```
    # step  this is  env.step()
     def step(self, action_n):
-        # Luke: Update the environment by one step. Track the current step, and prepare to collect observations, rewards, done flags, and info for each agent.
+        # Luke: Update the environment by one step. Track the current step, 
+        # and prepare to collect observations, rewards, done flags, and info for each agent.
         # Luke: Track the number of steps in the current episode.
         self.current_step += 1
         # Luke: Store observations for each agent.
@@ -611,7 +393,8 @@ In envs/MPE_env.py
         self.world.step()  # core.step() in envs/core.py 
         
         # record observation for each agent
-        # Luke: For each agent, collect the observation, reward, done flag, and additional info. If the agent fails, record it in the info.
+        # Luke: For each agent, collect the observation, reward, 
+        # done flag, and additional info. If the agent fails, record it in the info.
         for i, agent in enumerate(self.agents):
             obs_n.append(self._get_obs(agent))
             reward_n.append([self._get_reward(agent)])
@@ -622,7 +405,8 @@ In envs/MPE_env.py
                 info['fail'] = env_info['fail']
             info_n.append(info)
 
-        # all agents get total reward in cooperative case, if shared reward, all agents have the same reward, and reward is sum
+        # all agents get total reward in cooperative case, if shared reward, 
+        # all agents have the same reward, and reward is sum
         reward = np.sum(reward_n)
         if self.shared_reward:
             reward_n = [[reward]] * self.n
@@ -640,8 +424,10 @@ In envs/MPE_env.py
 ```
 Insert all the data from the previous steps into the buffer.
 ```
-                # Luke: Package the collected data into a tuple for easy insertion into the buffer.
-                data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
+                # Luke: Package the collected data into a tuple 
+                # for easy insertion into the buffer.
+                data = obs, rewards, dones, infos, values, \
+                    actions, action_log_probs, rnn_states, rnn_states_critic
 
                 # insert data into buffer
                 # Luke: Insert the collected data into the buffer.
@@ -654,8 +440,10 @@ Details of insertation:
         obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic = data
 
         # Luke: Reset RNN states for agents that are done.
-        rnn_states[dones == True] = np.zeros(((dones == True).sum(), self.recurrent_N, self.hidden_size), dtype=np.float32)
-        rnn_states_critic[dones == True] = np.zeros(((dones == True).sum(), *self.buffer.rnn_states_critic.shape[3:]), dtype=np.float32)
+        rnn_states[dones == True] = np.zeros(((dones == True).sum(), \
+            self.recurrent_N, self.hidden_size), dtype=np.float32)
+        rnn_states_critic[dones == True] = np.zeros(((dones == True).sum(), \
+            *self.buffer.rnn_states_critic.shape[3:]), dtype=np.float32)
         # Luke: Create masks to indicate whether an agent is done or not.
         masks = np.ones((self.n_rollout_threads, self.num_agents, 1), dtype=np.float32)
         masks[dones == True] = np.zeros(((dones == True).sum(), 1), dtype=np.float32)
@@ -668,7 +456,8 @@ Details of insertation:
             share_obs = obs
 
         # Luke: Insert the collected data into the buffer.
-        self.buffer.insert(share_obs, obs, rnn_states, rnn_states_critic, actions, action_log_probs, values, rewards, masks)
+        self.buffer.insert(share_obs, obs, rnn_states, rnn_states_critic, \
+            actions, action_log_probs, values, rewards, masks)
 ```
 
 Than, compute, train, and eval it.
@@ -735,7 +524,8 @@ class R_Critic(nn.Module):
 
         # Luke: Determine the shape of the centralized observation based on the observation space.
         cent_obs_shape = get_shape_from_obs_space(cent_obs_space)
-        # Luke: Choose the base network architecture (CNNBase for images, MLPBase for others) based on observation shape.
+        # Luke: Choose the base network architecture 
+        # (CNNBase for images, MLPBase for others) based on observation shape.
         base = CNNBase if len(cent_obs_shape) == 3 else MLPBase
         # Luke: Initialize the base network with the selected architecture and centralized observation shape.
         self.base = base(args, cent_obs_shape)
@@ -792,7 +582,8 @@ Calculate the value function loss by clipping the predicted values to ensure sta
         """
         Calculate value function loss.
         :param values: (torch.Tensor) value function predictions.
-        :param value_preds_batch: (torch.Tensor) "old" value predictions from data batch (used for value clip loss)
+        :param value_preds_batch: (torch.Tensor) "old" value predictions 
+            from data batch (used for value clip loss)
         :param return_batch: (torch.Tensor) reward to go returns.
         :param active_masks_batch: (torch.Tensor) denotes if agent is active or dead at a given timestep.
 
@@ -884,7 +675,8 @@ Fllowing is the core part of PPO algorithm:
         if self._use_policy_active_masks:
             policy_action_loss = (-torch.sum(torch.min(surr1, surr2),
                                              dim=-1,
-                                             keepdim=True) * active_masks_batch).sum() / active_masks_batch.sum()
+                                             keepdim=True) * active_masks_batch).sum() \
+                                                /  active_masks_batch.sum()
         else:
             policy_action_loss = -torch.sum(torch.min(surr1, surr2), dim=-1, keepdim=True).mean()
 
@@ -920,7 +712,8 @@ Fllowing is the core part of PPO algorithm:
         # Luke: Backpropagate the value loss scaled by the value loss coefficient.
         (value_loss * self.value_loss_coef).backward()
 
-        # Luke: Clip the gradients for the critic if max grad norm is enabled, otherwise calculate the gradient norm.
+        # Luke: Clip the gradients for the critic if max grad norm is enabled, 
+        # otherwise calculate the gradient norm.
         if self._use_max_grad_norm:
             critic_grad_norm = nn.utils.clip_grad_norm_(self.policy.critic.parameters(), self.max_grad_norm)
         else:
@@ -938,7 +731,8 @@ Fllowing is the core part of PPO algorithm:
         :param buffer: (SharedReplayBuffer) buffer containing training data.
         :param update_actor: (bool) whether to update actor network.
 
-        :return train_info: (dict) contains information regarding training update (e.g. loss, grad norms, etc).
+        :return train_info: (dict) contains information regarding 
+            training update (e.g. loss, grad norms, etc).
         """
         # Luke: Compute the advantages for the training data.
         if self._use_popart or self._use_valuenorm:
@@ -969,7 +763,8 @@ Fllowing is the core part of PPO algorithm:
         for _ in range(self.ppo_epoch):
             # Luke: Use the appropriate data generator based on the policy type.
             if self._use_recurrent_policy:
-                data_generator = buffer.recurrent_generator(advantages, self.num_mini_batch, self.data_chunk_length)
+                data_generator = buffer.recurrent_generator(advantages, \
+                    self.num_mini_batch, self.data_chunk_length)
             elif self._use_naive_recurrent:
                 data_generator = buffer.naive_recurrent_generator(advantages, self.num_mini_batch)
             else:
@@ -1027,7 +822,8 @@ In the end, evalute the process result.
         eval_obs = self.eval_envs.reset()
 
         # Luke: Initialize RNN states and masks for the evaluation episodes.
-        eval_rnn_states = np.zeros((self.n_eval_rollout_threads, *self.buffer.rnn_states.shape[2:]), dtype=np.float32)
+        eval_rnn_states = np.zeros((self.n_eval_rollout_threads, \
+            *self.buffer.rnn_states.shape[2:]), dtype=np.float32)
         eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
 
         for eval_step in range(self.episode_length):
@@ -1043,7 +839,8 @@ In the end, evalute the process result.
             # Luke: Rearrange the evaluation actions to match the environment's action space format.
             if self.eval_envs.action_space[0].__class__.__name__ == 'MultiDiscrete':
                 for i in range(self.eval_envs.action_space[0].shape):
-                    eval_uc_actions_env = np.eye(self.eval_envs.action_space[0].high[i]+1)[eval_actions[:, :, i]]
+                    eval_uc_actions_env = \
+                        np.eye(self.eval_envs.action_space[0].high[i]+1)[eval_actions[:, :, i]]
                     if i == 0:
                         eval_actions_env = eval_uc_actions_env
                     else:
@@ -1059,7 +856,8 @@ In the end, evalute the process result.
             eval_episode_rewards.append(eval_rewards)
 
             # Luke: Reset RNN states for agents that are done during evaluation.
-            eval_rnn_states[eval_dones == True] = np.zeros(((eval_dones == True).sum(), self.recurrent_N, self.hidden_size), dtype=np.float32)
+            eval_rnn_states[eval_dones == True] = \
+                np.zeros(((eval_dones == True).sum(), self.recurrent_N, self.hidden_size), dtype=np.float32)
             eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
             eval_masks[eval_dones == True] = np.zeros(((eval_dones == True).sum(), 1), dtype=np.float32)
 
